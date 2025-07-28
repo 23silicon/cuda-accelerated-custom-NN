@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.datasets import fetch_openml
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
+import time
 
 class FNN_classifier:
 
@@ -241,11 +242,12 @@ class FNN_classifier:
     X_TEST = None
     Y_TEST = None
     accHistory = []
-    def train(self, X, y, layerDims, epochs, learningRate):
+    lrHist = []
+    def train(self, X, y, layerDims, epochs, learningRate, runOptimizer = True):
 
         params = self.initializeParams(layerDims)
         costHistory = []
-
+        accSlopes = []
         for i in range(epochs):
             Y_hat, caches = self.forwardProp(X)
             cost = self.crossEntropyLoss(Y_hat,y)
@@ -256,8 +258,19 @@ class FNN_classifier:
             
             accuracy = np.mean(self.predict(FNN_classifier.X_TEST) == np.argmax(FNN_classifier.Y_TEST, axis=1))
             self.accHistory.append(accuracy)
-            if i%10 == 0:
-                print(f"Epoch {i}: Accuracy = {accuracy * 100:.2f}%")
+            
+            #Approximates derivative of the accHistory function
+            if len(self.accHistory) > 1:
+                accSlopes.append(self.accHistory[i]-self.accHistory[i-1])
+            
+            #running my optimizer
+            if runOptimizer:
+                if len(accSlopes) >= 3:
+                    learningRate = self.updateLR(i, epochs, accSlopes, learningRate)
+                    self.lrHist.append(learningRate)
+            
+            if i%2 == 0:
+                print(f"Epoch {i}: Accuracy = {accuracy * 100:.2f}% | LR = {learningRate}")
             
         return params, costHistory
     
@@ -265,6 +278,44 @@ class FNN_classifier:
         A, _ = self.forwardProp(X)
 #        print(A.shape)
         return np.argmax(A, axis=0) #return highest probability index
+    
+    #My self-designed optimizer program inspired from RMS-prop.
+    def updateLR(self, i, epochs, accSlopes, learningRate):
+        first = accSlopes[0]
+        if first < 0:
+            first = 0 - first
+        lr = learningRate
+        ###recentSlopeAvg = (accSlopes[i] + accSlopes[i-1] + accSlopes[i-2])/3
+        #Optimization begins after certain fraction of allotted epochs is done to make sure stabilization has started.
+        #For index errors, stops before last epoch. 
+        if epochs > 0 and i/epochs > 0.2 and i < epochs:
+            if accSlopes[i-1] < accSlopes[i-2] and accSlopes[i-1] > 0:
+                #decrease the learning rate proportionally to the derivative decrease but within limits 0.75 to 1. 
+                changeFactor = accSlopes[i-1]/first
+                if changeFactor < 0.75:
+                    changeFactor = 0.75
+                if changeFactor > 1:
+                    changeFactor = 1
+                lr *= changeFactor
+            if accSlopes[i-1] < 0:
+                cslope = 0 - accSlopes[i-1]
+                changeFactor = max(cslope,first)/min(cslope,first) #ensures >1 value
+                if changeFactor < 1:
+                    changeFactor = 1
+                if changeFactor > 1.1:
+                    changeFactor = 1.1
+                lr *= changeFactor
+        
+        return lr
+            
+
+
+            
+    """
+    -------------------------------------------------------------------------------------------------------
+    """          
+
+
     
     '''
     Changes to make:
@@ -276,7 +327,7 @@ class FNN_classifier:
 
 #get mnist
 print("Loading MNIST dataset...")
-mnist = fetch_openml('mnist_784', version=1)
+mnist = fetch_openml('Fashion-MNIST', version=1)
 X,y = mnist['data'], mnist['target']
 
 print("Encoding data...")
@@ -299,7 +350,7 @@ FNN_classifier.Y_TEST = y_test
 
 
 
-layerDims = [784,128,10] #1 hidden layer specified
+layerDims = [784,256,10] #1 hidden layer specified. 784*256 + 256*10 = 200704 + 2560 = 203264 total weights
 
 
 print("Training neural network...")
@@ -307,8 +358,11 @@ print("Training neural network...")
 network = FNN_classifier()
 network.activation = "relu" #relu, tanh, sigmoid are available
 
-params, costHistory = network.train(X_train, y_train, layerDims, epochs = 50, learningRate = 1.2)
-
+start = time.time()
+params, costHistory = network.train(X_train, y_train, layerDims, epochs = 1000, learningRate = 1.2, runOptimizer=False)
+#use 0.6 learning rate for fashion mnist, 1.2 for mnist
+end = time.time() #times training
+print(f"Training completed in {end - start} seconds.")
 #Make plots to display mnist numbers and plot cost history
 
 
@@ -324,10 +378,11 @@ print("Expected labels:\t", np.argmax(y_test, axis=1)[:35])
 accuracy = np.mean(yPred == np.argmax(y_test, axis=1))
 print(f"Accuracy: {accuracy * 100:.2f}%")
 
-fig,axs = plt.subplots(2)
-fig.suptitle('Network Accuracy and Cost Histories')
+fig,axs = plt.subplots(3)
+fig.suptitle('Network Accuracy, Cost Histories and LR History')
 axs[0].plot(network.accHistory, label = 'Accuracy History', color = 'blue')
 axs[1].plot(costHistory, label = 'Cost History', color = 'red')
+axs[2].plot(network.lrHist, label = 'LR History', color = 'green')
 fig.legend()
 fig.set_figheight(6)
 fig.set_figwidth(10)
