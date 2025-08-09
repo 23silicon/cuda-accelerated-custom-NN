@@ -7,13 +7,15 @@ Build a deep feedforward neural network from scratch, acccelerated with CUDA
 This project uses a matrix multiplication CUDA kernel I wrote to significantly accelerate both inference and backpropagation by parallelizing on the GPU.
 Uses Pybind11 to call the kernel (written in C++) from my network in python.
 
-**On CPU:                      Training completes in 40m 4.68s
-On GPU (with matmul kernel): Training completes in 16m 37.23s
+**On CPU:                      Training completes in 40m 4.68s**
 
-Speedup: 2.411x**
+**On GPU (with matmul kernel): Training completes in 16m 37.23s**
+
+**Speedup: 2.411x**
 
 GPU: NVIDIA Tesla T4
 Cuda matmul kernels launched in lines 93, 169, 171 in the neural network training cell.
+
 TO DO for much faster training: (Once openml finally works again)
   - Implement vector addition kernel for adding result of matmul to bias vectors.
   - Replace numpy with torch tensors so copy between device and host is not needed.
