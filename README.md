@@ -9,15 +9,10 @@ Uses Pybind11 to call the kernel (written in C++) from my network in python.
 
 **On CPU:                      Training completes in 40m 4.68s**
 
-**On GPU (with matmul kernel): Training completes in 16m 37.23s**
+**On GPU (with matmul kernel): Training completes in 3m 49.59s**
 
-**Speedup: 2.411x**
+**Average Speedup: 10.47x (best result: 10.57x)**
 
 GPU: NVIDIA Tesla T4
 Cuda matmul kernels launched in lines 93, 169, 171 in the neural network training cell.
-
-TO DO for much faster training: (Once openml finally works again)
-  - Implement vector addition kernel for adding result of matmul to bias vectors.
-  - Replace numpy with torch tensors so copy between device and host is not needed.
-
 
