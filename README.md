@@ -14,5 +14,5 @@ Uses Pybind11 to call the kernel (written in C++) from my network in python.
 **Average Speedup: 10.47x (best result: 10.57x)**
 
 GPU: NVIDIA Tesla T4
-Cuda matmul kernels launched in lines 93, 169, 171 in the neural network training cell.
+Cuda matmul kernels launched in lines 103, 177, 179 in the neural network training cell.
 
